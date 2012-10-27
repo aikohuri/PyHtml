@@ -1,4 +1,5 @@
 from collections import deque
+from os.path import abspath, expanduser
 
 
 class TagBase:
@@ -30,6 +31,10 @@ class TagBase:
         *contents - [str/Tag] a content surrounded by <tag>...</tag>.
         '''
         self.contents.extend(list(contents))
+
+    def addFromFile(self, path):
+        with open(abspath(expanduser(path)), 'r') as f:
+            self.contents.append(f.read())
 
     def set(self, *contents):
         '''
