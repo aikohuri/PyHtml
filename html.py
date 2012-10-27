@@ -87,7 +87,7 @@ class PHP(TagBase):
         TagBase.__init__(self, "", *codes, stag='<?php ', etag='?>', emptyTag=False)
 
 
-class Page:
+class PAGE:
 
     def __init__(self, head=None, body=None, html=None, DTD=XHTML1_0_TRANSITIONAL, XMLNS="http://www.w3.org/1999/xhtml", DIR='', LANG=''):
         if head is not None and not isinstance(head, HEAD):
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     print body
     print
 
-    page = Page(head, body)
+    page = PAGE(head, body)
     print 
     print page.toPrettyString(indentChar='   ', offset='   ', uppercase=False)
     print
@@ -259,7 +259,7 @@ if __name__ == '__main__':
     print
     print html.toString(uppercase=False)
     print
-    page2 = Page(html=html)
+    page2 = PAGE(html=html)
     page2.save('test2.html', indentChar='    ')
     page2.setHead(head)
     page2.setBody(body)
