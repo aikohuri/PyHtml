@@ -218,19 +218,27 @@ class PAGE:
 
 
 if __name__ == '__main__':
+    import webbrowser
+
     head = HEAD()
     head.add(META(NAME="description", CONTENT="Test page"))
     head.add(META(NAME="keywords", CONTENT="HTML, CSS"))
     head.add(LINK(REL='stylesheet', TYPE='text/css', HREF='test.css'))
 
     body = BODY()
+
     body.add(H1(P('test page')))
-    body.add(A('test', HREF="test.html"))
+
+    body.add(A(HREF="test.html").add('test'))
+
     body.contents[-1].setAttr(ONMOUSEOVER="this.style.background='pink';", ONMOUSEOUT="this.style.background='white';")
-    body.add(TABLE(TR(TD('test1', STYLE="background:blue;"), TD(A('test2', HREF='test.html')), TD(STRONG('test3'))),
-                   TR(TD('hello'), TD('world'), TD('!'), BGCOLOR='red'),
-                   BGCOLOR='rgb(125,0,0)',
-                   CLASS='table'))
+
+    body.add(
+            TABLE(BGCOLOR='rgb(125,0,0)', CLASS='table').add(
+                TR().add(TD('test1', STYLE="background:blue;"), TD(A('test2', HREF='test.html')), TD(STRONG('test3'))),
+                TR(TD('hello'), TD('world'), TD('!'), BGCOLOR='red'),
+                )
+            )
 
     tbl = TABLE(*(TR(*(TD('(%d,%d)' % (i,j)) for j in range(10))) for i in range(10)))
     for i, row in enumerate(tbl.contents):
@@ -238,8 +246,9 @@ if __name__ == '__main__':
     tbl.setAttr(ONMOUSEOVER="this.style.background='pink';", ONMOUSEOUT="this.style.background='white';")
     body.add(tbl)
 
-    body.add(SCRIPT('document.write("Hello World!")', TYPE="text/javascript"))
-    body.add(PHP('echo "Hello World";'))
+    body.add(SCRIPT('document.write("Hello World!")', TYPE="text/javascript"), BR())
+    body.addFromFile('test/partial.html')
+    body.add(INPUT(TYPE='button',ONCLICK='showAlert()',VALUE="Show alert box"), SCRIPT().addFromFile('test/alert.js'))
     print
     print body
     print
@@ -248,7 +257,7 @@ if __name__ == '__main__':
     print 
     print page.toPrettyString(indentChar='   ', offset='   ', uppercase=False)
     print
-    page.save('test.html', indentChar='   ')
+    page.save('test/test.html', indentChar='   ')
 
 
     html = HTML(COMMENT('Header'),
@@ -260,8 +269,9 @@ if __name__ == '__main__':
     print html.toString(uppercase=False)
     print
     page2 = PAGE(html=html)
-    page2.save('test2.html', indentChar='    ')
+    page2.save('test/test2.html', indentChar='    ')
     page2.setHead(head)
     page2.setBody(body)
-    page2.save('test3.html', indentChar='    ')
+    page2.save('test/test3.html', indentChar='    ')
 
+    webbrowser.open('test/test.html')

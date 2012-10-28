@@ -31,10 +31,12 @@ class TagBase:
         *contents - [str/Tag] a content surrounded by <tag>...</tag>.
         '''
         self.contents.extend(list(contents))
+        return self
 
     def addFromFile(self, path):
         with open(abspath(expanduser(path)), 'r') as f:
             self.contents.append(f.read())
+        return self
 
     def set(self, *contents):
         '''
@@ -43,6 +45,7 @@ class TagBase:
         *contents - [str/Tag] a content surrounded by <tag>...</tag>.
         '''
         self.contents = list(contents)
+        return self
 
     def setAttr(self, **attrs):
         '''
@@ -54,6 +57,7 @@ class TagBase:
                 self.attrlist.append(attr)
             else:
                 raise TypeError('<%s> does not have "%s" attribute' % (self.tagName, attr))
+        return self
 
     def toString(self, uppercase=True):
         if uppercase:
