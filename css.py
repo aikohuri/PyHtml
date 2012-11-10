@@ -5,14 +5,12 @@ import operator
 import html
 
 
-
 class Rule:
 
-    def __init__(self, sels='', decls={}, *childRules):
+    def __init__(self, sels='', decls={}):
         '''
         sels - [str/list] selector(s) for the style rule.
         decls - [dict] declaractions of the style rule.
-        *childRules - [Rule] child(ren) of this style rule.
         '''
         if isinstance(sels, list):
             self.selectors = set(sels)
@@ -21,27 +19,68 @@ class Rule:
         else:
             self.selectors = set()
         self.declarations = decls
-        self.children = set(childRules)
+        self.rules = {
+                'inside' : (' ', set()),
+                'below'  : ('>', set()),
+                'after'  : ('+', set()),
+                'behind' : ('~', set()),
+                }
 
     def __str__(self):
         return self.toPrettyString()
 
     def add(self, *args):
         '''
-        args - [dict] add declaration to this rule.
-               [str, str] add (prop, val) pair to declaration of this rule.
-               [list] add list of Rules to this rule's children list.
-               [Rule] add Rule(s) to this rule's children list.
+        Add declaration(s) to this rule.
+        args - [dict] declarations
+             - [str, str] a pair of property name and property value
         '''
         if len(args) == 1 and isinstance(args[0], dict):
             self.declarations.update(args[0])
-        elif len(args) == 2 and all([isinstance(a, str) for a in args]):
-            self.declarations[args[0]] = args[1]
-        elif len(args) == 1 and isinstance(args[0], list) or all([isinstance(a, Rule) for a in args]):
-            if isinstance(args[0], list):
-                self.children.update(args[0])
-            else:
-                self.children.update(args)
+        elif len(args) > 1 and all([isinstance(a, str) for a in args]):
+            for i in range(0, len(args), 2):
+                self.declarations[args[i]] = args[i+1]
+        return self
+
+    def inside(self, *args):
+        '''
+        Add Rules inside this rule. (i.e. elem elem)
+        args - [Rule]
+        '''
+        if any([not isinstance(a, Rule) for a in args]):
+            raise Exception('*** Must be Rule object ***')
+        self.rules['inside'][1].update(args)
+        return self
+
+    def below(self, *args):
+        '''
+        Add Rules below this rule. (i.e. elem>elem)
+        args - [Rule]
+        '''
+        if any([not isinstance(a, Rule) for a in args]):
+            raise Exception('*** Must be Rule object ***')
+        self.rules['below'][1].update(args)
+        return self
+
+    def after(self, *args):
+        '''
+        Add Rules after this rule. (i.e. elem+elem)
+        args - [Rule]
+        '''
+        if any([not isinstance(a, Rule) for a in args]):
+            raise Exception('*** Must be Rule object ***')
+        self.rules['after'][1].update(args)
+        return self
+
+    def behind(self, *args):
+        '''
+        Add Rules behind this rule. (i.e. elem~elem)
+        args - [Rule]
+        '''
+        if any([not isinstance(a, Rule) for a in args]):
+            raise Exception('*** Must be Rule object ***')
+        self.rules['behind'][1].update(args)
+        return self
 
     def addSelector(self, *sels):
         '''
@@ -51,6 +90,7 @@ class Rule:
             self.selectors.update(sels[0])
         else:
             self.selectors.update(sels)
+        return self
 
     def getSelector(self):
         return self.selectors
@@ -59,16 +99,21 @@ class Rule:
         return self.declarations
 
     def merge(self, iRule):
+        '''
+        Merge the selector and declarations of iRule into this rule.
+        '''
         self.addSelector(iRule.selectors)
         self.add(iRule.declarations)
-        self.add(iRule.children)
+        for key, (_, rules) in iRule.rules.items():
+            self.rules[key][1].update(rules)
+        return self
 
     def _getFirstSelName(self):
         return '' if not self.selectors else sorted([s for s in self.selectors])[0]
 
-    def _toString(self, iParentSel=[]):
+    def _toString(self, iParentSel=[], relation=' '):
         if iParentSel:
-            iParentSel = ['%s %s' % (ps, ss) for ps in iParentSel for ss in self.selectors]
+            iParentSel = ['%s%s%s' % (ps, relation, ss) for ps in iParentSel for ss in self.selectors]
         else:
             iParentSel = copy.deepcopy(self.selectors) # deep copy
 
@@ -80,19 +125,17 @@ class Rule:
                                 '{' if iParentSel else '',
                                 ''.join(['%s:%s;' % (k,v) for k,v in sorted(self.declarations.items(), key=operator.itemgetter(0))]),
                                 '}' if iParentSel else '']))
-        css.extend([child._toString(iParentSel) for child in sorted(self.children, key=lambda child: child._getFirstSelName())])
+        for key, (rel, rules) in self.rules.items():
+            css.extend([rule._toString(iParentSel, rel) for rule in sorted(rules, key=lambda rule: rule._getFirstSelName())])
 
         return ''.join(css)
-
-    def toInline(self):
-        return ''.join(['%s:%s;' % (k,v) for k,v in sorted(self.declarations.items(), key=operator.itemgetter(0))])
 
     def toString(self, uppercase=True):
         return self._toString()
 
-    def _toPrettyString(self, iIndentChar='    ', iOffset='', iParentSel=[]):
+    def _toPrettyString(self, iIndentChar='    ', iOffset='', iParentSel=[], relation=' '):
         if iParentSel:
-            iParentSel = ['%s %s' % (ps, ss) for ps in iParentSel for ss in self.selectors]
+            iParentSel = ['%s%s%s' % (ps, relation, ss) for ps in iParentSel for ss in self.selectors]
         else:
             iParentSel = copy.deepcopy(self.selectors) # deep copy
 
@@ -104,7 +147,8 @@ class Rule:
                                   '%s{' % (iOffset) if iParentSel else '',
                                   '\n'.join(['%s%s%s: %s;' % (iOffset, iIndentChar,k,v) for k,v in sorted(self.declarations.items(), key=operator.itemgetter(0))]),
                                   '%s}' % iOffset if iParentSel else ''])) 
-        css.extend([child._toPrettyString(iIndentChar, iOffset, iParentSel) for child in sorted(self.children, key=lambda child: child._getFirstSelName())])
+        for key, (rel, rules) in self.rules.items():
+            css.extend([rule._toPrettyString(iIndentChar, iOffset, iParentSel, rel) for rule in sorted(rules, key=lambda rule: rule._getFirstSelName())])
 
         return '\n'.join(css)
 
@@ -164,9 +208,11 @@ if __name__ == '__main__':
 
     rule = Rule(['ul#comments', 'ol#comments'],
                 {'margin':'0', 'padding':'0'},
+                ).inside(
                 Rule('li',
                      {'padding':'0.4em',
                       'margin':'0.8em 0 0.8em'},
+                     ).below(
                      Rule('h3', {'font-size':'1.2em'}),
                      Rule('p', {'padding':'0.3em'}),
                      Rule('p.meta', {'text-align': 'right', 'color':'#ddd'})))
@@ -181,18 +227,22 @@ if __name__ == '__main__':
     rule = Rule('table')
     rule.add({'background':'red', 'font-size':'20px'})
 
+    print '--------------------------------------------'
+
     rule_h3 = Rule('h3', {'font-size':'1.2em'})
-    rule.add(rule_h3)
+    rule.after(rule_h3)
+    print rule
+
+    print '--------------------------------------------'
 
     rule_p  = Rule('p', {'padding':'0.3em'})
     rule.merge(rule_p)
-
     print rule
+
     css.add(rule)
     css.save('test.css', iIndentChar='    ')
 
     print css.toStyleTag()
     print
     print linkTag('test.css')
-    print Rule('',{'sewer':'vsdf'}).toInline()
 
